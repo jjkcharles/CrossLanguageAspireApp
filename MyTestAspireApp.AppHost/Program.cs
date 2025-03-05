@@ -1,25 +1,37 @@
+using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.Hosting;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
 var apiService = builder.AddProject<Projects.MyTestAspireApp_ApiService>("apiservice");
 
+var postgresDB = builder.AddPostgres("localPg")
+    .AddDatabase("postgres");
+
+string? postgresHostname = "", postgresUsername = "", postgresPassword = "", postgresDBName = "";
+postgresHostname = "localhost" + ":" + postgresDB.Resource.Parent.PrimaryEndpoint.Port;
+postgresDBName = postgresDB.Resource.DatabaseName;
+postgresUsername = postgresDB.Resource.Parent.UserNameParameter?.Value;
+postgresPassword = postgresDB.Resource.Parent.PasswordParameter?.Value;
+
+
+var javaApi = builder.AddSpringApp("javaapi", "../Other Dependencies/sampleapi",
+        new JavaAppExecutableResourceOptions() {
+             OtelAgentPath = "lib/",
+             ApplicationName = "target/sampleapi-0.0.1-SNAPSHOT.jar",
+             Port=8090
+        })
+    .WithEnvironment("DB_URL", $"jdbc:postgresql://{postgresHostname}/{postgresDBName}")
+    .WithEnvironment("DB_USERNAME", $"{postgresUsername}")
+    .WithEnvironment("DB_PASSWORD", $"{postgresPassword}")
+    .WithOtlpExporter()
+    .WithHttpEndpoint(8090, name: "javaapi-http", isProxied:false)
+    .WithReference(apiService)
+    .WithReference(postgresDB);
+
 builder.AddProject<Projects.MyTestAspireApp_Web>("webfrontend")
     .WithExternalHttpEndpoints()
-    .WithReference(apiService);
-
-var javaproject = builder.AddDockerfile("javaproject", "../Other Dependencies/sampleapi")
-    .WithEnvironment("DB_URL", "jdbc:postgresql://host.docker.internal/postgres")
-    .WithOtlpExporter()
-    .WithHttpEndpoint(8090, 8090);
-
-
-var launchProfile = builder.Configuration["DOTNET_LAUNCH_PROFILE"] ??
-                    builder.Configuration["AppHost:DefaultLaunchProfileName"]; // work around https://github.com/dotnet/aspire/issues/5093
-
-if (builder.Environment.IsDevelopment() && launchProfile == "https")
-{
-    javaproject.RunWithHttpsDevCertificate("HTTPS_CERT_FILE", "HTTPS_CERT_KEY_FILE");
-}
+    .WithReference(apiService)
+    .WithReference(javaApi);
 
 builder.Build().Run();

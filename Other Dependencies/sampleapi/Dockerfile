@@ -4,6 +4,8 @@ FROM maven:3.9-eclipse-temurin-21-alpine
 # Set the working directory to /app
 WORKDIR /app
 
+USER root
+
 RUN mkdir -p ./agents
 RUN wget -P ./agents \
         https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/latest/download/opentelemetry-javaagent.jar

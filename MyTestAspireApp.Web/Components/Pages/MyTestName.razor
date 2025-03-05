@@ -1,0 +1,19 @@
+﻿@page "/name"
+@rendermode InteractiveServer
+
+@inject JavaAPIClient javaAPIClient;
+
+<PageTitle>My Test Name from Java API</PageTitle>
+
+<h1>Hello Name</h1>
+
+<p role="status">@name</p>
+
+@code {
+    private string name = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        name = await javaAPIClient.GetName();
+    }
+}

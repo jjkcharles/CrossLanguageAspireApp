@@ -19,6 +19,11 @@ builder.Services.AddHttpClient<WeatherApiClient>(client =>
         client.BaseAddress = new("https+http://apiservice");
     });
 
+builder.Services.AddHttpClient<JavaAPIClient>(client =>
+{
+    client.BaseAddress = new("https+http://javaapi");
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
